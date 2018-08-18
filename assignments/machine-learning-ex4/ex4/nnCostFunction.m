@@ -61,24 +61,78 @@ Theta2_grad = zeros(size(Theta2));
 %               the regularization separately and then add them to Theta1_grad
 %               and Theta2_grad from Part 2.
 %
+X = [ones(m, 1) X];
+
+z2 = Theta1*X';
+a2 = sigmoid(z2);
+a2 = a2';
+a2 = [ones(size(a2,1), 1) a2];
+
+z3 = Theta2*a2';
+a3 = sigmoid(z3);
+% a3 is of size 10 X 5000.
+
+% y is a vector 5000 X 1.
+% Need to convert it to binary representation resulting in 5000 X 10.
+y_vectors = zeros(m, num_labels);
+for iter = 1:size(y, 1)
+    y_vectors(iter, y(iter)) = 1;
+end
+y_vectors = y_vectors';
+% y_vectors is size 10 X 5000.
+J = sum(((-y_vectors.*log(a3)) - ((1-y_vectors).*log(1-a3)))(:))/m;
 
 
+% Ignore the bias unit.
+temp1 = Theta1;
+temp1(:, 1) = 0;
+temp2 = Theta2;
+temp2(:, 1) = 0;
 
+reg_param = (sum(sum(temp1.^2))) + (sum(sum(temp2.^2)));
+J = J + ((lambda/(2*m))*reg_param);
 
+delta1 = zeros(size(Theta1));
+delta2 = zeros(size(Theta2));
 
+for iter = 1:m
+    a1 = X(iter,:)';
+    % a3 = y_vectors(:,iter);
+    
+    % For layer 2.
+    z2 = Theta1*a1; % size(z2) = 25 X 1 (size(Theta1) = 25 X 401 ) 
+    a2 = sigmoid(z2); % size(a2) = 25 X 1
 
+    % For layer 3.
+    a2 = [1; a2]; % size(a2) = 26 X 1
+    z3 = Theta2*a2; % size(z3) = 10 X 1 (size(Theta2) = 10 X 26 ) 
+    a3 = sigmoid(z3); % size(a3) = 10 X 1
+    
+    ym = y_vectors(:,iter); % size(ym) = 10 X 1
 
+    del3 = a3 - ym; % 10 X 1
+    % find del2 with generic form del(l) = theta(l)'*del(l+1).*a(l).*(1-a(l))
+    % sizes in this case: ((26 X 10)*(10 X 1)).*(26 X 1).*(26X1) = 26 X 1
+    del2 = (Theta2'*del3).*(a2).*(1-a2); % 26 X 1
 
+    % generic implementation: delta(l) := delta(l) + del(l+1)*(a(l))'
+    delta1 = delta1 + del2(2:end,:)*a1'; % (25 X 1) * (1 X 401) = 25 * 401
+    delta2 = delta2 + del3*a2'; % (10 X 1) * (1 X 26) = 10 * 26
+end
 
+% Unregularised.
+Theta1_grad = (1/m)*(delta1); % 25 * 401
+Theta2_grad = (1/m)*(delta2); % 10 * 26 
 
+% Regularised.
+% Theta1_grad = [Theta1_grad(:,1), (Theta1_grad(:,2:end) + lambda.*Theta1(:,2:end))/m];
+% Theta2_grad = [Theta2_grad(:,1), (Theta2_grad(:,2:end) + lambda.*Theta2(:,2:end))/m];
 
+reg1 = [(lambda/m)*Theta1(:,2:end)];
+reg2 = [(lambda/m)*Theta2(:,2:end)];
 
-
-
-
-
-
-
+Theta1_grad = [Theta1_grad(:,1) Theta1_grad(:,2:end).+reg1];
+Theta2_grad = [Theta2_grad(:,1) Theta2_grad(:,2:end).+reg2];
 
 % -------------------------------------------------------------
 
